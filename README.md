@@ -77,6 +77,7 @@ python -m tests_offline.test_techniques_mock
 python -m tests_offline.test_self_consistency_tie_mock
 python -m tests_offline.test_rubric_decomposition_mock
 python -m tests_offline.test_tree_of_thoughts_mock
+python -m tests_offline.test_eval_set_sanity_mock
 python -m tests_offline.test_run_eval_mock
 ```
 
