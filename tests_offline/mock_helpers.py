@@ -9,7 +9,17 @@
 # (ZERO_SHOT_PROMPT), so they can't be distinguished by prompt content,
 # and don't need to be: the mock's default response is shaped correctly
 # for both. few_shot and chain_of_thought each add a distinct phrase not
-# present in the zero-shot template, checked first.
+# present in the zero-shot template, checked first. persona, self_critique,
+# and prompt_ensemble's 3 phrasings all also parse the same
+# {"escalate":..., "reasoning":...} shape as zero_shot (self_critique's
+# parsing defaults a missing "revised" key to False), so they fall
+# through to the same default response too, no dedicated markers needed.
+# rubric_decomposition and tree_of_thoughts need their own dispatch
+# entries: their parsing expects different keys entirely (5 boolean
+# criteria for rubric, "tentative_escalate" instead of "escalate" for a
+# tree_of_thoughts reasoning path), a response shaped for the other
+# techniques would parse as a structural failure for these two, not
+# exercising their real happy path.
 
 from contextlib import ExitStack
 from types import SimpleNamespace
@@ -30,6 +40,13 @@ def _fake_generate_content(model, contents, config=None):
         text = '{"escalate": false, "reasoning": "mock: few-shot default, no escalation needed"}'
     elif "Think it through before deciding" in contents:
         text = '{"reasoning": "mock: chain-of-thought default reasoning", "escalate": false}'
+    elif "scoring a support ticket against a fixed" in contents:
+        text = ('{"financial_harm": false, "data_or_security_exposure": false, "safety_risk": false, '
+                '"hard_deadline_at_risk": false, "major_account_at_risk": false, "reasoning": "mock: no criteria apply"}')
+    elif "synthesizing 3 independent reviewers" in contents:
+        text = '{"escalate": false, "reasoning": "mock: synthesis default, no escalation needed"}'
+    elif "one of several independent reviewers" in contents:
+        text = '{"reasoning": "mock: reasoning path default", "tentative_escalate": false}'
     else:
         text = '{"escalate": false, "reasoning": "mock: zero-shot default, no escalation needed"}'
     return SimpleNamespace(text=text)

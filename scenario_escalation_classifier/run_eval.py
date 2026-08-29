@@ -1,13 +1,19 @@
 # scenario_escalation_classifier/run_eval.py
-# Runs all 4 techniques against the full 12-ticket labeled eval set and
+# Runs all 9 techniques against the full 16-ticket labeled eval set and
 # reports accuracy, the actual point of this repo: which technique gets
-# more tickets right, not which one sounds more sophisticated.
+# more tickets right, not which one sounds more sophisticated. This is
+# a lot of real API calls (roughly 20 per ticket summed across all 9
+# techniques, some single-call, some multi-call, times 16 tickets),
+# expect this to take a while against the free-tier rate limit.
 
 import argparse
 from pathlib import Path
 from common.drift_monitor import save_baseline, check_drift
 from scenario_escalation_classifier.classifier import classify
-from scenario_escalation_classifier.techniques import zero_shot, few_shot, chain_of_thought, self_consistency
+from scenario_escalation_classifier.techniques import (
+    zero_shot, few_shot, chain_of_thought, self_consistency,
+    persona, self_critique, rubric_decomposition, prompt_ensemble, tree_of_thoughts
+)
 from scenario_escalation_classifier.eval_set import EVAL_SET
 from common.evaluator import TechniqueEvaluator
 
@@ -16,6 +22,11 @@ TECHNIQUES = {
     "few_shot": (few_shot, Path("baselines/escalation_few_shot.json")),
     "chain_of_thought": (chain_of_thought, Path("baselines/escalation_chain_of_thought.json")),
     "self_consistency": (self_consistency, Path("baselines/escalation_self_consistency.json")),
+    "persona": (persona, Path("baselines/escalation_persona.json")),
+    "self_critique": (self_critique, Path("baselines/escalation_self_critique.json")),
+    "rubric_decomposition": (rubric_decomposition, Path("baselines/escalation_rubric_decomposition.json")),
+    "prompt_ensemble": (prompt_ensemble, Path("baselines/escalation_prompt_ensemble.json")),
+    "tree_of_thoughts": (tree_of_thoughts, Path("baselines/escalation_tree_of_thoughts.json")),
 }
 
 
@@ -50,7 +61,7 @@ def _run_one(name: str, technique_fn, baseline_path: Path, save: bool):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate all 4 prompting techniques against the labeled escalation eval set.")
+    parser = argparse.ArgumentParser(description="Evaluate all 9 prompting techniques against the labeled escalation eval set.")
     parser.add_argument("--save-baseline", action="store_true",
                          help="Save this run's results as the new baseline instead of checking drift against the existing one.")
     args = parser.parse_args()

@@ -1,18 +1,38 @@
 # scenario_escalation_classifier/run_demo.py
-# Runs all 4 techniques against 2 of the eval set's trap tickets, one
-# where tone suggests escalation but the real issue doesn't warrant it,
-# one where a calm tone hides a genuinely severe issue. A technique that
-# just pattern-matches tone should get both wrong the same way; a
-# technique that reasons about actual impact shouldn't.
+# Two demos. The first runs all 9 techniques against the 2 original
+# tone-vs-severity trap tickets. The second runs only the 5 additional
+# techniques (persona, self_critique, rubric_decomposition,
+# prompt_ensemble, tree_of_thoughts) against a harder, business-context
+# ticket that has no obvious technical severity signal at all, keeping
+# the original 4 out of this second demo since eval_set.py's docstring
+# already covers why they tied on the original trap tickets, this demo
+# is specifically about whether the 5 newer techniques handle a
+# different kind of ambiguity.
 
 from scenario_escalation_classifier.classifier import classify
-from scenario_escalation_classifier.techniques import zero_shot, few_shot, chain_of_thought, self_consistency
+from scenario_escalation_classifier.techniques import (
+    zero_shot, few_shot, chain_of_thought, self_consistency,
+    persona, self_critique, rubric_decomposition, prompt_ensemble, tree_of_thoughts
+)
 
 TECHNIQUES = {
     "zero_shot": zero_shot,
     "few_shot": few_shot,
     "chain_of_thought": chain_of_thought,
     "self_consistency": self_consistency,
+    "persona": persona,
+    "self_critique": self_critique,
+    "rubric_decomposition": rubric_decomposition,
+    "prompt_ensemble": prompt_ensemble,
+    "tree_of_thoughts": tree_of_thoughts,
+}
+
+ADVANCED_TECHNIQUES = {
+    "persona": persona,
+    "self_critique": self_critique,
+    "rubric_decomposition": rubric_decomposition,
+    "prompt_ensemble": prompt_ensemble,
+    "tree_of_thoughts": tree_of_thoughts,
 }
 
 DEMO_TICKETS = [
@@ -20,24 +40,44 @@ DEMO_TICKETS = [
     ("Quick heads up, I noticed the /api/users/export endpoint is returning other customers' email addresses and phone numbers when I call it with my own API key.", True),
 ]
 
+HARD_TICKET = (
+    "A long-time enterprise customer (5 years, $2M ARR) is upset that a promised feature slipped "
+    "for the third quarter in a row and is hinting they might not renew. Nothing is broken, they "
+    "just want a straight answer about the roadmap.",
+    True
+)
 
-def run_ticket(ticket, expected):
+
+def run_ticket(ticket, expected, techniques):
     print(f"\nTicket: {ticket}")
     print(f"  expected_escalate: {expected}")
-    for name, fn in TECHNIQUES.items():
+    for name, fn in techniques.items():
         result = classify(name, fn, ticket)
         if result["blocked_at"]:
             print(f"  [{name}] BLOCKED at {result['blocked_at']}: {result['reason']}")
             continue
         mark = "OK" if result["predicted_escalate"] == expected else "WRONG"
-        votes_note = f", votes={result['votes']}" if result.get("votes") is not None else ""
-        print(f"  [{name}] predicted_escalate={result['predicted_escalate']} ({mark}){votes_note}")
+        extra = ""
+        if result.get("votes") is not None:
+            extra = f", votes={result['votes']}"
+        elif result.get("flags") is not None:
+            flagged = [k for k, v in result["flags"].items() if v]
+            extra = f", flags={flagged}"
+        elif result.get("revised") is not None:
+            extra = f", revised={result['revised']}"
+        elif result.get("paths") is not None:
+            extra = f", path_votes={[p['tentative_escalate'] for p in result['paths']]}"
+        print(f"  [{name}] predicted_escalate={result['predicted_escalate']} ({mark}){extra}")
         print(f"    reasoning: {result['reasoning']}")
 
 
 def main():
+    print("=== Original trap tickets, all 9 techniques ===")
     for ticket, expected in DEMO_TICKETS:
-        run_ticket(ticket, expected)
+        run_ticket(ticket, expected, TECHNIQUES)
+
+    print("\n=== A harder, business-context ticket, the 5 additional techniques only ===")
+    run_ticket(HARD_TICKET[0], HARD_TICKET[1], ADVANCED_TECHNIQUES)
 
 
 if __name__ == "__main__":
