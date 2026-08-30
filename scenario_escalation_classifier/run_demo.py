@@ -1,18 +1,17 @@
 # scenario_escalation_classifier/run_demo.py
-# Two demos. The first runs all 9 techniques against the 2 original
-# tone-vs-severity trap tickets. The second runs only the 5 additional
-# techniques (persona, self_critique, rubric_decomposition,
+# Two demos. The first runs all 15 techniques against the 2 original
+# tone-vs-severity trap tickets. The second runs the 5 techniques added
+# after the first 4 tied (persona, self_critique, rubric_decomposition,
 # prompt_ensemble, tree_of_thoughts) against a harder, business-context
 # ticket that has no obvious technical severity signal at all, keeping
 # the original 4 out of this second demo since eval_set.py's docstring
-# already covers why they tied on the original trap tickets, this demo
-# is specifically about whether the 5 newer techniques handle a
-# different kind of ambiguity.
+# already covers why they tied on the original trap tickets.
 
 from scenario_escalation_classifier.classifier import classify
 from scenario_escalation_classifier.techniques import (
     zero_shot, few_shot, chain_of_thought, self_consistency,
-    persona, self_critique, rubric_decomposition, prompt_ensemble, tree_of_thoughts
+    persona, self_critique, rubric_decomposition, prompt_ensemble, tree_of_thoughts,
+    xml_structured, system_role, prompt_chaining, abstention_aware, directional_stimulus, meta_prompting
 )
 
 TECHNIQUES = {
@@ -25,6 +24,12 @@ TECHNIQUES = {
     "rubric_decomposition": rubric_decomposition,
     "prompt_ensemble": prompt_ensemble,
     "tree_of_thoughts": tree_of_thoughts,
+    "xml_structured": xml_structured,
+    "system_role": system_role,
+    "prompt_chaining": prompt_chaining,
+    "abstention_aware": abstention_aware,
+    "directional_stimulus": directional_stimulus,
+    "meta_prompting": meta_prompting,
 }
 
 ADVANCED_TECHNIQUES = {
@@ -67,12 +72,14 @@ def run_ticket(ticket, expected, techniques):
             extra = f", revised={result['revised']}"
         elif result.get("paths") is not None:
             extra = f", path_votes={[p['tentative_escalate'] for p in result['paths']]}"
+        elif result.get("abstained") is not None:
+            extra = f", abstained={result['abstained']}"
         print(f"  [{name}] predicted_escalate={result['predicted_escalate']} ({mark}){extra}")
         print(f"    reasoning: {result['reasoning']}")
 
 
 def main():
-    print("=== Original trap tickets, all 9 techniques ===")
+    print("=== Original trap tickets, all 15 techniques ===")
     for ticket, expected in DEMO_TICKETS:
         run_ticket(ticket, expected, TECHNIQUES)
 

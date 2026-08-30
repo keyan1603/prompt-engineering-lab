@@ -1,10 +1,11 @@
 # scenario_escalation_classifier/run_eval.py
-# Runs all 9 techniques against the full 16-ticket labeled eval set and
-# reports accuracy, the actual point of this repo: which technique gets
-# more tickets right, not which one sounds more sophisticated. This is
-# a lot of real API calls (roughly 20 per ticket summed across all 9
-# techniques, some single-call, some multi-call, times 16 tickets),
-# expect this to take a while against the free-tier rate limit.
+# Runs all 15 techniques against the full 16-ticket labeled eval set and
+# reports accuracy. This is a lot of real API calls (the multi-call
+# techniques alone are 5+4+2+2 calls per ticket on top of 9 single-call
+# techniques, times 16 tickets, plus one one-time meta_prompting
+# template-revision call), expect this to take a while against the
+# free-tier rate limit. The blog post's own case study only reports the
+# original 9, run this if you want real numbers for the other 6 too.
 
 import argparse
 from pathlib import Path
@@ -12,7 +13,8 @@ from common.drift_monitor import save_baseline, check_drift
 from scenario_escalation_classifier.classifier import classify
 from scenario_escalation_classifier.techniques import (
     zero_shot, few_shot, chain_of_thought, self_consistency,
-    persona, self_critique, rubric_decomposition, prompt_ensemble, tree_of_thoughts
+    persona, self_critique, rubric_decomposition, prompt_ensemble, tree_of_thoughts,
+    xml_structured, system_role, prompt_chaining, abstention_aware, directional_stimulus, meta_prompting
 )
 from scenario_escalation_classifier.eval_set import EVAL_SET
 from common.evaluator import TechniqueEvaluator
@@ -27,6 +29,12 @@ TECHNIQUES = {
     "rubric_decomposition": (rubric_decomposition, Path("baselines/escalation_rubric_decomposition.json")),
     "prompt_ensemble": (prompt_ensemble, Path("baselines/escalation_prompt_ensemble.json")),
     "tree_of_thoughts": (tree_of_thoughts, Path("baselines/escalation_tree_of_thoughts.json")),
+    "xml_structured": (xml_structured, Path("baselines/escalation_xml_structured.json")),
+    "system_role": (system_role, Path("baselines/escalation_system_role.json")),
+    "prompt_chaining": (prompt_chaining, Path("baselines/escalation_prompt_chaining.json")),
+    "abstention_aware": (abstention_aware, Path("baselines/escalation_abstention_aware.json")),
+    "directional_stimulus": (directional_stimulus, Path("baselines/escalation_directional_stimulus.json")),
+    "meta_prompting": (meta_prompting, Path("baselines/escalation_meta_prompting.json")),
 }
 
 
@@ -61,7 +69,7 @@ def _run_one(name: str, technique_fn, baseline_path: Path, save: bool):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate all 9 prompting techniques against the labeled escalation eval set.")
+    parser = argparse.ArgumentParser(description="Evaluate all 15 prompting techniques against the labeled escalation eval set.")
     parser.add_argument("--save-baseline", action="store_true",
                          help="Save this run's results as the new baseline instead of checking drift against the existing one.")
     args = parser.parse_args()

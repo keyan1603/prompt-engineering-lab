@@ -1,5 +1,5 @@
 # tests_offline/test_techniques_mock.py
-# Smoke test: all 9 techniques run end to end through classifier.py's
+# Smoke test: all 15 techniques run end to end through classifier.py's
 # guardrail-and-tracer wrapper for one ticket. The mock always returns
 # escalate=false (or all-false criteria/paths for rubric_decomposition
 # and tree_of_thoughts), so this only checks the plumbing (a valid
@@ -12,7 +12,8 @@ from tests_offline.mock_helpers import patch_all_llm_calls
 from scenario_escalation_classifier.classifier import classify
 from scenario_escalation_classifier.techniques import (
     zero_shot, few_shot, chain_of_thought, self_consistency,
-    persona, self_critique, rubric_decomposition, prompt_ensemble, tree_of_thoughts
+    persona, self_critique, rubric_decomposition, prompt_ensemble, tree_of_thoughts,
+    xml_structured, system_role, prompt_chaining, abstention_aware, directional_stimulus, meta_prompting
 )
 
 TICKET = "How do I change my billing email address?"
@@ -22,6 +23,11 @@ SIMPLE_TECHNIQUES = (
     ("few_shot", few_shot),
     ("chain_of_thought", chain_of_thought),
     ("persona", persona),
+    ("xml_structured", xml_structured),
+    ("system_role", system_role),
+    ("prompt_chaining", prompt_chaining),
+    ("directional_stimulus", directional_stimulus),
+    ("meta_prompting", meta_prompting),
 )
 
 
@@ -37,8 +43,12 @@ def main():
         for name, fn in SIMPLE_TECHNIQUES:
             result = classify(name, fn, TICKET)
             _assert_contract(name, result)
-            for key in ("votes", "flags", "revised", "paths"):
+            for key in ("votes", "flags", "revised", "paths", "abstained"):
                 assert result[key] is None, f"{name}: expected no {key}, got {result[key]}"
+
+        abstain_result = classify("abstention_aware", abstention_aware, TICKET)
+        _assert_contract("abstention_aware", abstain_result)
+        assert abstain_result["abstained"] is False, f"abstention_aware: expected abstained=False from the mock (sufficient information), got {abstain_result['abstained']}"
 
         sc_result = classify("self_consistency", self_consistency, TICKET)
         _assert_contract("self_consistency", sc_result)

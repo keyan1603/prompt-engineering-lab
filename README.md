@@ -10,7 +10,7 @@ infra established across earlier posts, most directly
 
 One scenario, `scenario_escalation_classifier`: given a support ticket,
 decide whether it needs immediate escalation to a human responder. The
-same underlying question, asked nine different ways:
+same underlying question, asked fifteen different ways:
 
 - **`zero_shot`**: a plain instruction, no examples.
 - **`few_shot`**: the same instruction plus 4 worked examples that
@@ -33,8 +33,27 @@ same underlying question, asked nine different ways:
   sampling temperature, then a separate synthesis call that reads all 3
   paths' actual reasoning and picks the best-supported conclusion
   instead of tallying votes.
+- **`xml_structured`**: the same instruction marked up with XML tags
+  (`<role>`, `<task>`, `<ticket>`, `<output_format>`) instead of prose,
+  per Anthropic's own prompting guidance.
+- **`system_role`**: the exact same persona guidance as `persona`, but
+  delivered through the API's dedicated system-instruction field instead
+  of embedded in the user content.
+- **`prompt_chaining`**: 2 sequential calls, the first extracts a
+  neutral summary and impacts list from the raw ticket, the second
+  decides from that structured summary alone, never seeing the original
+  tone-laden text.
+- **`abstention_aware`**: explicitly allowed to say "insufficient
+  information" instead of guessing, distinguishing a real abstention
+  from a parse failure in its return shape.
+- **`directional_stimulus`**: a short steering hint naming the specific
+  signals that matter, without worked examples or a full rubric.
+- **`meta_prompting`**: uses an LLM once to propose an improved prompt
+  template from a separate 4-ticket dev set, then applies that template
+  like any single-call technique, a bounded, dev-set-safe version of
+  Automatic Prompt Engineer.
 
-All nine are scored against `scenario_escalation_classifier/eval_set.py`:
+All fifteen are scored against `scenario_escalation_classifier/eval_set.py`:
 16 tickets with a known-correct label, not an LLM judge, this task has
 real ground truth so exact-match accuracy is what actually answers "did
 this technique get more tickets right." The first 12 include 4
@@ -47,11 +66,18 @@ mildly-alarming language for a genuinely minor issue, a calm
 confirmation question carrying real compliance-deadline stakes, and
 technical-sounding language for something with zero customer impact.
 
-Several other named prompting techniques (ReAct, Retrieval Augmented
-Generation, Program-Aided Language Models, Multimodal CoT, Automatic
-Prompt Engineer) are deliberately not implemented here, see the
+Several other named prompting techniques (ReAct and Automatic Reasoning
+and Tool-use, Retrieval Augmented Generation, Program-Aided Language
+Models, Multimodal CoT) are deliberately not implemented here, see the
 comment at the top of `techniques.py` for why each doesn't fit this
 task.
+
+Prompting technique is where a lot of the real creativity in this field
+lives. The 15 here are real, currently-used ones worth knowing, not a
+closed list, don't stop at these if your own task calls for something
+none of them quite fit, inventing a new prompt structure for a problem
+these don't solve is exactly how a fair number of the named techniques
+above came to exist in the first place.
 
 ## Setup (Windows / PowerShell)
 
@@ -78,6 +104,8 @@ python -m tests_offline.test_self_consistency_tie_mock
 python -m tests_offline.test_rubric_decomposition_mock
 python -m tests_offline.test_tree_of_thoughts_mock
 python -m tests_offline.test_eval_set_sanity_mock
+python -m tests_offline.test_abstention_aware_mock
+python -m tests_offline.test_meta_prompting_mock
 python -m tests_offline.test_run_eval_mock
 ```
 
@@ -88,9 +116,10 @@ python -m scenario_escalation_classifier.run_eval --save-baseline
 python -m scenario_escalation_classifier.run_eval
 ```
 
-This makes a lot of real API calls, roughly 20 per ticket summed across
-all 9 techniques (some single-call, some multi-call) times 16 tickets,
-expect it to take a while against the free-tier rate limit.
+This makes a lot of real API calls across all 15 techniques (some
+single-call, some multi-call) times 16 tickets, expect it to take a
+while against the free-tier rate limit. The blog post's own case study
+only reports real numbers for the original 9.
 
 ## License
 

@@ -16,6 +16,11 @@
 # compliance-deadline stakes for a major account. #16 uses technical-
 # sounding language ("errors", "API") for something with zero customer
 # impact, a staging-only internal tool.
+#
+# DEV_SET, below EVAL_SET in this file, is a separate 4-ticket set used
+# only by meta_prompting to propose an improved prompt template, never
+# used to score any technique. See DEV_SET's own comment for why that
+# separation matters.
 
 EVAL_SET = [
     {
@@ -82,4 +87,18 @@ EVAL_SET = [
         "ticket": "Our load testing script, not used by real customers, is throwing errors when hitting your staging environment API.",
         "expected_escalate": False
     }
+]
+
+# DEV_SET is strictly separate from EVAL_SET, meta_prompting uses these 4
+# tickets once to propose an improved prompt template, and that revised
+# template is then scored ONLY against EVAL_SET, never against DEV_SET
+# again. Mixing the two would let the "improved" prompt overfit to the
+# exact tickets it's graded on, the same overfitting risk that's the
+# entire reason Automatic Prompt Engineer isn't implemented in this repo
+# without a safeguard like this one, see techniques.py's meta_prompting.
+DEV_SET = [
+    {"ticket": "A trial user says the onboarding checklist has a typo in step 3.", "expected_escalate": False},
+    {"ticket": "Our biggest reseller partner says they'll pause promoting us unless we fix API rate limits by Friday.", "expected_escalate": True},
+    {"ticket": "A user asks whether the mobile app supports tablets.", "expected_escalate": False},
+    {"ticket": "Support inbox got 40 identical auto-generated tickets in the last hour from what looks like a broken webhook loop on the customer's own side, not ours.", "expected_escalate": False}
 ]

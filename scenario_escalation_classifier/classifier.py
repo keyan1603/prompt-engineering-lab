@@ -23,7 +23,7 @@ ROLE_DESCRIPTION = ("Read a support ticket and decide whether it needs immediate
 
 _guardrail = AgentGuardrail(NAME, ROLE_DESCRIPTION)
 
-EXTRA_METADATA_KEYS = ["votes", "flags", "revised", "paths"]
+EXTRA_METADATA_KEYS = ["votes", "flags", "revised", "paths", "abstained"]
 
 
 def classify(technique_name: str, technique_fn, ticket: str) -> dict:

@@ -20,6 +20,16 @@
 # tree_of_thoughts reasoning path), a response shaped for the other
 # techniques would parse as a structural failure for these two, not
 # exercising their real happy path.
+#
+# xml_structured, system_role, directional_stimulus, and the second
+# (decide) call inside prompt_chaining all also parse the same
+# {"escalate":..., "reasoning":...} shape, so they fall through to the
+# default too. system_role's system_instruction text isn't inspected at
+# all here, this mock only looks at `contents`, which is fine since its
+# user-content prompt needs the same default shape regardless.
+# prompt_chaining's first (extract) call, abstention_aware, and
+# meta_prompting's one-time template-revision call each need their own
+# dispatch entries for the same reason rubric/tree_of_thoughts do.
 
 from contextlib import ExitStack
 from types import SimpleNamespace
@@ -47,6 +57,12 @@ def _fake_generate_content(model, contents, config=None):
         text = '{"escalate": false, "reasoning": "mock: synthesis default, no escalation needed"}'
     elif "one of several independent reviewers" in contents:
         text = '{"reasoning": "mock: reasoning path default", "tentative_escalate": false}'
+    elif "extract two things" in contents:
+        text = '{"summary": "mock: neutral summary of the ticket", "impacts": []}'
+    elif "does not give you enough information to decide either way" in contents:
+        text = '{"escalate": false, "reasoning": "mock: abstention-aware default, sufficient information present", "insufficient_information": false}'
+    elif "You are improving a prompt template" in contents:
+        text = '{"revised_template": "Mock revised template. Ticket: {ticket} Respond with only a JSON object, no markdown fences, in this exact shape: {\\"escalate\\": <true|false>, \\"reasoning\\": \\"<one sentence>\\"}"}'
     else:
         text = '{"escalate": false, "reasoning": "mock: zero-shot default, no escalation needed"}'
     return SimpleNamespace(text=text)
